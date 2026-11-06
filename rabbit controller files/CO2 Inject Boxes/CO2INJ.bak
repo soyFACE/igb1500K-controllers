@@ -1,6 +1,17 @@
 #define UNIT_ID 0  // Unit Number used for COM Identification
 #define Polled 0
-#define TCPCONFIG 7
+
+#define TCPCONFIG 0
+#define USE_ETHERNET		1
+		#define IFCONFIG_ETH0 \
+				IFS_IPADDR,aton(_PRIMARY_STATIC_IP), \
+				IFS_NETMASK,aton(_PRIMARY_NETMASK), \
+				IFS_UP
+#define _PRIMARY_STATIC_IP "192.168.1.101"
+#define MY_NETMASK "255.255.255.0"
+#define MY_GATEWAY "192.168.1.1"
+#define MY_NAMESERVER "8.8.8.8"
+
 #define BOOTP_DEBUG		// Allow Dynamic C debugging in bootp.lib
 #define BOOTP_VERBOSE		// Print lots of detail
 #define DHCP_NUM_SMTP 1		// Get an SMTP server if possible
@@ -161,7 +172,7 @@ typedef unsigned char uchar;
 typedef unsigned int  uint;
 typedef unsigned long ulong;
 
-static unsigned long store;				// physical memory address to write to
+
 
 
 
@@ -311,7 +322,7 @@ int tempn;
 
 int sec_count;
 long off_time[2];
-int loc;  //Location Holder for Memory Pointer
+
 
 
 struct tm		rtc;		//Time and Date struct
@@ -356,7 +367,7 @@ int init_recv(int port);
 void recv_tick(void);
 void receive_data(char *buf, int len);
 float CalcTempSet(void);
-void ReadData(void);
+
 //void print_results(void);
 
 int receive_packet_udp(void)
@@ -440,22 +451,15 @@ main()
 
    int inputnum;
    int outputnum;
-   //loc = 0;
 
-	store = xalloc(40960);//(65536);		// physical memory address (SRAM)
+
+
 
 	keyInit();			// Start-up the keypad driver
 	keypadDef();		// Use the default keypad ASCII return values
 	brdInit();
 	glInit();			// Initialize the graphic driver
    digOutConfig(0xFFFF);
-ifconfig(IF_DEFAULT,			// (DHCP only works on default interface)
-		//IFS_DHCP_TIMEOUT, 60,		// Specify timeout in seconds
-      IFS_DHCP_TIMEOUT, 10,		// Specify timeout in seconds
-		IFS_DHCP_FALLBACK, 1,	// Allow use of fallbacks to static configuration
-		IFS_ICMP_CONFIG, 1,		// Also allow use of directed ping to configure (only if DHCP times out).
-		IFS_END);
-
 	sock_init();
 //print_results();
 	/*
@@ -842,13 +846,13 @@ return tempc;
 /************************************************************/
 void fControl(void)
 {
-		fpps[0]= readtemp(0);
+		fpps[0]= 0; // readtemp(0); // 2026-11-06 JAM hard-coded temp variable since this device doesn't have temperature control
     	//fpps[0]= 20;
    	fpps[1]= anaInVolts(1)*10000;
       printf("%12.6f \n",fpps[1]);
-      fpps[2]= readtemp(2);
+      fpps[2]= 0; //readtemp(2); // 2026-11-06 JAM hard-coded temp variable since this device doesn't have temperature control
       fVp[0] = PIDCalc ( &sPID,fpps[0] );    // Perform PID Interation
-      if(digIn(0) && sPID1.SetPoint != 0) fVp[1] = PIDCalc ( &sPID1,fpps[1] );    // Perform PID Interation
+      if( && sPID1.SetPoint != 0) fVp[1] = PIDCalc ( &sPID1,fpps[1] );    // Perform PID Interation  /2026-11-05 Removed check for digIn(0) for testing. The new SBA-5s might not support this.
       else    //Zero Output if Analyzer is in alarm;
       	{
          fVp[1]=0;
@@ -916,63 +920,61 @@ auto int retval1;
 //*************************************************************************************************************************************************************************************************
 //******    Minute averages
 //*************************************************************************************************************************************************************************************************
-void minute_average(void)
-{
-auto int retval1;
-for(chn=0;chn < N_CHANNELS+1;chn++)
-	{
-		txlm[chn] = txlm[chn] / nContao[chn];
-		vento[chn] = vento[chn] / nContao[chn];
-		medo[chn] = medo[chn] / nContao[chn];
-	}
-		//fDew = fDew/nContao[0];
+void minute_average(void) {
+  auto int retval1;
+  for (chn = 0; chn < N_CHANNELS + 1; chn++) {
+    txlm[chn] = txlm[chn] / nContao[chn];
+    vento[chn] = vento[chn] / nContao[chn];
+    medo[chn] = medo[chn] / nContao[chn];
+  }
+  //fDew = fDew/nContao[0];
 
-		(int)StatusCode = ozonator_loc && ozonator_rem && flow;
-		sprintf(message,"M,%d,%02d/%02d/%04d,%02d:%02d:%02d,%.2f,%.1f,%.1f,%.2f,%.1f,%.1f,%.2f,%.1f,%.1f,%d \r",UNIT_ID,rtc.tm_mon,rtc.tm_mday,(1900 + rtc.tm_year),rtc.tm_hour,rtc.tm_min,rtc.tm_sec,txlm[0],medo[0],sPID.SetPoint,txlm[1],medo[1],sPID1.SetPoint,txlm[2],medo[2],TARG[2],StatusCode);
-      if(state->state == 1)
-      	{
-	      retval1 = sock_fastwrite(state->s,message,strlen(message));
-	      }
-
- if(loc >= 35879) loc = 0;    //60455
-
-      root2xmem(store+loc*4,&SEC_TIMER,4);//Store Time Stamp at beginning of each loop
-   	loc++;
+  (int) StatusCode = ozonator_loc && ozonator_rem && flow;
+  sprintf(message, "M,%d,%02d/%02d/%04d,%02d:%02d:%02d,%.2f,%.1f,%.1f,%.2f,%.1f,%.1f,%.2f,%.1f,%.1f,%d \r", UNIT_ID, rtc.tm_mon, rtc.tm_mday, (1900 + rtc.tm_year), rtc.tm_hour, rtc.tm_min, rtc.tm_sec, txlm[0], medo[0], sPID.SetPoint, txlm[1], medo[1], sPID1.SetPoint, txlm[2], medo[2], TARG[2], StatusCode);
+  if (state -> state == 1) {
+    retval1 = sock_fastwrite(state -> s, message, strlen(message));
+  }
 
 
 
-      root2xmem(store+loc*4, &txlm[1], 4);    //txlm[0],medo[0],sPID.SetPoint
-   	loc++;
-      root2xmem(store+loc*4, &medo[1], 4);    //txlm[0],medo[0],sPID.SetPoint
-      loc++;
-      root2xmem(store+loc*4, &sPID1.SetPoint, 4);    //txlm[0],medo[0],sPID.SetPoint
-      loc++;
-      //Store 2 temps
-      root2xmem(store+loc*4, &medo[0], 4);    //txlm[0],medo[0],sPID.SetPoint
-      loc++;
-      root2xmem(store+loc*4, &medo[2], 4);    //txlm[0],medo[0],sPID.SetPoint
-      loc++;
-
-
-   printf("%d line 958\n", loc);
 
 
 
-        	if(RECORD > 2975) RECORD=0;
-        	//write_mem(RECORD);
-        	RECORD = RECORD + 1;
 
-for(chn=0;chn < N_CHANNELS+1;chn++)
-	{
 
-		medo[chn] = 0;
-		vento[chn] = 0;
-		txlm[chn] = 0;
-		nContao[chn] = 0;
-	}
-		fDew = 0;
-sPID.SetPoint = (float)CalcTempSet();
-//TARG[0] = settings[0];
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  if (RECORD > 2975) RECORD = 0;
+  //write_mem(RECORD);
+  RECORD = RECORD + 1;
+
+  for (chn = 0; chn < N_CHANNELS + 1; chn++) {
+
+    medo[chn] = 0;
+    vento[chn] = 0;
+    txlm[chn] = 0;
+    nContao[chn] = 0;
+  }
+  fDew = 0;
+  sPID.SetPoint = (float) CalcTempSet();
+  //TARG[0] = settings[0];
 
 }
 
@@ -1503,13 +1505,13 @@ void DispMenu (	void	)
 							cont_loop();
 				// Turn Ozone ON
 				case 2:	glBlankScreen();
-                     ReadData();
+
 							cont_loop();
 							break;
 
 				// Turn Ozone OFF
 				case 3:	glBlankScreen();
-							loc = 0;
+
 							cont_loop();
 							break;
 
@@ -1855,35 +1857,5 @@ void readString_IP(void)
 }
 
 
-void ReadData(void)
-{
-int j, l, m;
-float a, data[16];
-long time, b;
-char message[300];
-char c[20];
-m=0;
 
-for(j=0; j< (loc/6);j++)
-	{
-
-	xmem2root(&b, store+m*4, 4);
-	mktm(&rtc,b);
-	m++;
-
-	for(l=0;l<5;l++)
-		{
-		xmem2root(&a, store+m*4, 4);
-		m++;
-		data[l] = a;
-		}
-		sprintf(message,"%02d/%02d/%04d,%02d:%02d:%02d, %6.3f,%6.1f,%6.1f,%6.3f,%6.3f \n\r", rtc.tm_mon,rtc.tm_mday,(rtc.tm_year+1900),rtc.tm_hour,rtc.tm_min,rtc.tm_sec, data[0], data[1], data[2], data[3], data[4]);
-		serBputs(message);
-   		while (serBwrFree() != BOUTBUFSIZE) ;
-     printf("%02d/%02d/%04d,%02d:%02d:%02d, %6.3f,%6.1f,%6.1f,%6.3f,%6.3f \n", rtc.tm_mon,rtc.tm_mday,(rtc.tm_year+1900),rtc.tm_hour,rtc.tm_min,rtc.tm_sec, data[0], data[1], data[2], data[3], data[4]);
-
-
-	}
-
-}
 
