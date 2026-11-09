@@ -321,7 +321,7 @@ float temptot;                               // variable to sum temp readings
 int tempn;
 
 int sec_count;
-long off_time[2];
+unsigned long off_time[2];
 
 
 
@@ -763,8 +763,8 @@ if(fVs[0] > 0) digOut(0,1);
 if(fVs[1] > 0)digOut(1,1);
 
 
-off_time[0] = MS_TIMER + (fVs[0]*1000);
-off_time[1] = MS_TIMER + (fVs[1]*1000);
+off_time[0] = MS_TIMER + (unsigned long)(fVs[0]*1000);
+off_time[1] = MS_TIMER + (unsigned long)(fVs[1]*1000);
 //printf("%5.2f, %5.2f \n",   fVs[0],fVs[1]);
 
 }
@@ -1776,17 +1776,17 @@ void readString_IP(void)
          	string_pos_ip = 0;
 				token = strtok(NULL,delim);
             token = strtok(NULL,delim);
-            settings[0] = atoi(token);
+            settings[0] = atol(token);
             token = strtok(NULL,delim);
-            settings[1] = atoi(token);
+            settings[1] = atol(token);
 				token = strtok(NULL,delim);
             settings[2] = atol(token);
 				token = strtok(NULL,delim);
-            settings[3] = atoi(token);
+            settings[3] = atol(token);
 				token = strtok(NULL,delim);
-            settings[4] = atoi(token);
+            settings[4] = atol(token);
             token = strtok(NULL,delim);
-            settings[5] = atoi(token);
+            settings[5] = atol(token);
             save_data[0] = &settings;
 				save_lens[0] = sizeof(settings);
 
